@@ -11,7 +11,32 @@ const schema = a.schema({
     .model({
       content: a.string(),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [allow.owner()]),
+  CafeItem: a.model({
+      id: a.id(),
+      name: a.string(),
+      price: a.string(),
+      // 4. Add relationship field to the join model
+      //    with the reference of `cafeItemId`
+      orders: a.hasMany('OrderCafeItem', 'cafeItemId')
+  }).authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
+  Order: a.model({
+      id: a.id(),
+      // 3. Add relationship field to the join model
+      //    with the reference of `orderId`
+      items: a.hasMany('OrderCafeItem', 'orderId')
+  }).authorization(allow => [allow.owner()]),
+  OrderCafeItem: a.model({
+    // 1. Create reference fields to both ends of
+    //    the many-to-many relationship
+    orderId: a.id().required(),
+    cafeItemId: a.id().required(),
+    // 2. Create relationship fields to both ends of
+    //    the many-to-many relationship using their
+    //    respective reference fields
+    order: a.belongsTo('Order', 'orderId'),
+    cafeItem: a.belongsTo('CafeItem', 'cafeItemId'),
+  }).authorization(allow => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,13 +44,15 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
+    // defaultAuthorizationMode: 'userPool',
     defaultAuthorizationMode: "apiKey",
     // API Key is used for a.allow.public() rules
     apiKeyAuthorizationMode: {
-      expiresInDays: 30,
+      expiresInDays: 365,
     },
   },
 });
+
 
 /*== STEP 2 ===============================================================
 Go to your frontend source code. From your client-side code, generate a
